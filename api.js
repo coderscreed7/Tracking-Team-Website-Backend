@@ -11,7 +11,13 @@ const app = express();
 
 app.use(express.json());
 app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: [
+        'https://tracking-team.vercel.app/',
+        'https://trackingteam.netlify.app',
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:4173'
+    ],
     credentials: true
 }));
 
@@ -106,30 +112,30 @@ app.get("/companies", async (req, res) => {
 });
 
 // Remove "Branches Allowed" field from all documents and add "Coordinator" field
-app.post("/migrate", async (req, res) => {
-    try {
-        const result = await Company.updateMany(
-            {},
-            { 
-                $unset: { "Branches Allowed": "" },
-                $set: { 
-                    Coordinator: "",
-                    Tracked: false,
-                    Invited: false,
-                    Called: false
-                }
-            }
-        );
+// app.post("/migrate", async (req, res) => {
+//     try {
+//         const result = await Company.updateMany(
+//             {},
+//             { 
+//                 $unset: { "Branches Allowed": "" },
+//                 $set: { 
+//                     Coordinator: "",
+//                     Tracked: false,
+//                     Invited: false,
+//                     Called: false
+//                 }
+//             }
+//         );
         
-        res.json({ 
-            message: "Migration complete",
-            modifiedCount: result.modifiedCount
-        });
-    } catch (error) {
-        console.error('Migration error:', error);
-        res.status(500).json({ error: 'Failed to migrate data' });
-    }
-});
+//         res.json({ 
+//             message: "Migration complete",
+//             modifiedCount: result.modifiedCount
+//         });
+//     } catch (error) {
+//         console.error('Migration error:', error);
+//         res.status(500).json({ error: 'Failed to migrate data' });
+//     }
+// });
 
 // Update coordinator for a company
 app.patch("/company/:id/coordinator", async (req, res) => {
@@ -218,61 +224,61 @@ app.get("/coordinator-stats", async (req, res) => {
 });
 
 // Sync data from external API to MongoDB (run once to populate DB)
-app.post("/sync", async (req, res) => {
-    try {
-        console.log('Starting sync process...');
+// app.post("/sync", async (req, res) => {
+//     try {
+//         console.log('Starting sync process...');
         
-        // Fetch total count
-        const countResponse = await fetch('https://iamalone.adminisalone.workers.dev/');
-        const countText = await countResponse.text();
-        const totalCount = parseInt(countText.trim());
+//         // Fetch total count
+//         const countResponse = await fetch('https://iamalone.adminisalone.workers.dev/');
+//         const countText = await countResponse.text();
+//         const totalCount = parseInt(countText.trim());
         
-        console.log(`Total companies to sync: ${totalCount}`);
+//         console.log(`Total companies to sync: ${totalCount}`);
         
-        let synced = 0;
-        let updated = 0;
-        let created = 0;
+//         let synced = 0;
+//         let updated = 0;
+//         let created = 0;
         
-        // Fetch and store each company
-        for (let i = 1; i <= totalCount; i++) {
-            try {
-                const response = await fetch(`https://iamalone.adminisalone.workers.dev/isadminalone/${i}`);
-                const companyData = await response.json();
+//         // Fetch and store each company
+//         for (let i = 1; i <= totalCount; i++) {
+//             try {
+//                 const response = await fetch(`https://iamalone.adminisalone.workers.dev/isadminalone/${i}`);
+//                 const companyData = await response.json();
                 
-                const result = await Company.findOneAndUpdate(
-                    { id: i },
-                    { ...companyData, id: i },
-                    { upsert: true, new: true, setDefaultsOnInsert: true }
-                );
+//                 const result = await Company.findOneAndUpdate(
+//                     { id: i },
+//                     { ...companyData, id: i },
+//                     { upsert: true, new: true, setDefaultsOnInsert: true }
+//                 );
                 
-                // Check if document was created or updated
-                if (result.isNew) {
-                    created++;
-                } else {
-                    updated++;
-                }
+//                 // Check if document was created or updated
+//                 if (result.isNew) {
+//                     created++;
+//                 } else {
+//                     updated++;
+//                 }
                 
-                synced++;
-                if (synced % 50 === 0) {
-                    console.log(`Progress: ${synced}/${totalCount} companies processed`);
-                }
-            } catch (err) {
-                console.error(`Error syncing company ${i}:`, err.message);
-            }
-        }
+//                 synced++;
+//                 if (synced % 50 === 0) {
+//                     console.log(`Progress: ${synced}/${totalCount} companies processed`);
+//                 }
+//             } catch (err) {
+//                 console.error(`Error syncing company ${i}:`, err.message);
+//             }
+//         }
         
-        console.log(`Sync complete: ${synced} total, ${created} created, ${updated} updated`);
-        res.json({ 
-            message: `Successfully synced ${synced} companies`,
-            created,
-            updated,
-            total: synced
-        });
-    } catch (error) {
-        console.error('Sync error:', error);
-        res.status(500).json({ error: 'Failed to sync data' });
-    }
-});
+//         console.log(`Sync complete: ${synced} total, ${created} created, ${updated} updated`);
+//         res.json({ 
+//             message: `Successfully synced ${synced} companies`,
+//             created,
+//             updated,
+//             total: synced
+//         });
+//     } catch (error) {
+//         console.error('Sync error:', error);
+//         res.status(500).json({ error: 'Failed to sync data' });
+//     }
+// });
 
 const PORT = process.env.PORT || 3000;
 
